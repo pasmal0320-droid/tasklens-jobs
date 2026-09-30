@@ -10,7 +10,7 @@
 
 | 과제 | 페이지 | 저장소 |
 |---|---|---|
-| 1. TaskLens — AI 과업 노출 탐색기 | https://pasmal0320-droid.github.io/ | `pasmal0320-droid.github.io` |
+| 1. TaskLens — AI 과업 노출 탐색기 | https://pasmal0320-droid.github.io/tasklens/ | `tasklens` |
 | 2. TaskLens 공고 과업 분석 (이 저장소) | https://pasmal0320-droid.github.io/tasklens-jobs/ | `tasklens-jobs` |
 
 이 페이지는 1번 TaskLens를 확장한 것이다. TaskLens가 미국 표준 직업(O\*NET)의 과업 단위로 AI 적용 가능성과 Claude 대화 확인 여부를 보여 준다면, 이 페이지는 한국 채용공고에 실제로 적힌 일을 같은 기준과 같은 용어로 읽는다. TaskLens 저장소와 데이터는 수정하지 않고 링크로만 연결한다.

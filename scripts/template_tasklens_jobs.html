@@ -135,13 +135,13 @@ footer p{margin:4px 0}
 <body>
 <nav class="top" aria-label="페이지 목차"><div class="wrap">
   <a class="logo" href="#top"><i aria-hidden="true"></i>TaskLens 공고 과업 분석</a>
-  <div class="navlinks"><a href="https://pasmal0320-droid.github.io/">← TaskLens</a><a href="#summary">요약</a><a href="#posts">공고</a></div>
+  <div class="navlinks"><a href="https://pasmal0320-droid.github.io/tasklens/">← TaskLens</a><a href="#summary">요약</a><a href="#posts">공고</a></div>
   <button class="iconbtn" id="themeBtn" type="button" aria-label="밝게/어둡게 전환" title="밝게/어둡게 전환">◐</button>
 </div></nav>
 
 <main id="top" class="wrap">
 <header class="hero" id="overview">
-  <div class="kicker">KAIST ITM.690 인공지능 경영과 법 · <a href="https://pasmal0320-droid.github.io/">TaskLens</a> 확장</div>
+  <div class="kicker">KAIST ITM.690 인공지능 경영과 법 · <a href="https://pasmal0320-droid.github.io/tasklens/">TaskLens</a> 확장</div>
   <h1>TaskLens 공고 과업 분석</h1>
   <p class="q">이 공고의 일 중 AI가 도울 수 있는 과업은 무엇인가?</p>
   <div class="card pad intro">
@@ -200,7 +200,7 @@ footer p{margin:4px 0}
 <footer><div class="wrap">
   <p><b>TaskLens 공고 과업 분석</b> · 강병석 · KAIST 기술경영전문대학원 ITM.690 인공지능 경영과 법 (2026 가을)</p>
   <p id="footSrc"></p>
-  <p>관련 페이지: <a href="https://pasmal0320-droid.github.io/">TaskLens — AI 과업 노출 탐색기</a></p>
+  <p>관련 페이지: <a href="https://pasmal0320-droid.github.io/tasklens/">TaskLens — AI 과업 노출 탐색기</a></p>
   <p id="builtAt"></p>
 </div></footer>
 <div class="ban" role="note">이 결과는 채용 심사·인사 평가 용도로 사용할 수 없습니다.</div>
@@ -221,7 +221,7 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 const fmt = n => n.toLocaleString('ko-KR');
 const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '산출 불가';
 const frac = (a, b) => b ? `${a}/${b} (${pct(a, b)})` : '산출 불가';
-const TL = 'https://pasmal0320-droid.github.io/#occ=';
+const TL = 'https://pasmal0320-droid.github.io/tasklens/#occ=';
 const room = b => b == null ? '산출 불가' : b.toFixed(2);
 const S = D.summary, K1 = S.k1, P = D.posts, T = D.tasks, dec = S.decision;
 function table(head, rows, numCols = []) {
