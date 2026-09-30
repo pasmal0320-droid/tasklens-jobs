@@ -1,0 +1,12 @@
+# 원본·중간 데이터가 공개 저장소에 올라가지 않도록 하는 안전장치 (PRD v1.4 §6.1)
+private/
+*.csv
+*.xlsx
+*.xls
+*.npy
+*.jsonl
+*.env
+.env*
+__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaskLens 공고 과업 분석</title>
+<meta name="description" content="고용24 사무·전문직 공고의 업무 문장을 과업 단위로 나눠 O*NET 과업과 연결하고, TaskLens의 AI 적용 가능성 평가(GPT-4)와 Claude 대화 확인 여부를 붙여 본 과제 페이지.">
+<meta property="og:title" content="TaskLens 공고 과업 분석">
+<meta property="og:url" content="https://pasmal0320-droid.github.io/tasklens-jobs/">
+<meta property="og:locale" content="ko_KR">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%8D%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* 색상 토큰과 의미는 TaskLens와 같다: --exp E등급(E1 진하게, E2 55%), --null E0, --use Claude 관측, --auto 맡김, --aug 함께 작업 */
+:root{
+  --bg:#FAFAF7;--surface:#FFFFFF;--surface-2:#F1F2EE;--border:#E2E3DE;--text:#1A1D21;--text-muted:#5F6670;
+  --accent:#1F4E79;--exp:#2B6CB0;--use:#D97706;--auto:#7C3AED;--aug:#0F9D8A;--null:#B8BCC2;--ok:#2F7D4F;--warn:#B45309;
+  --shadow:0 1px 2px rgba(0,0,0,.05);--shadow-h:0 4px 14px rgba(0,0,0,.08);color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121417;--surface:#1B1F24;--surface-2:#232830;--border:#2F3540;--text:#E8EAED;--text-muted:#9AA3AE;
+  --accent:#7FB2E5;--exp:#63A4E8;--use:#F5A524;--auto:#A78BFA;--aug:#34C3AE;--null:#4A515C;--ok:#5CC08A;--warn:#F5A524;--shadow:none;--shadow-h:none;color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#121417;--surface:#1B1F24;--surface-2:#232830;--border:#2F3540;--text:#E8EAED;--text-muted:#9AA3AE;
+  --accent:#7FB2E5;--exp:#63A4E8;--use:#F5A524;--auto:#A78BFA;--aug:#34C3AE;--null:#4A515C;--ok:#5CC08A;--warn:#F5A524;--shadow:none;--shadow-h:none;color-scheme:dark;}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.65 Pretendard,system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-bottom:52px}
+a{color:var(--accent)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--text-muted)}
+.small{font-size:13px}
+.src{font-size:12px;color:var(--text-muted);line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+section{padding:64px 0 0}
+h1{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin:0 0 12px}
+h2{font-size:28px;font-weight:700;letter-spacing:-.01em;margin:0 0 8px}
+h3{font-size:18px;font-weight:700;margin:0 0 6px}
+.lead{font-size:18px;color:var(--text-muted);margin:0 0 24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+.pad{padding:20px 22px}
+nav.top{position:sticky;top:0;z-index:50;height:56px;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+nav.top .wrap{display:flex;align-items:center;height:100%;gap:16px}
+.logo{font-weight:800;font-size:18px;text-decoration:none;color:var(--text);letter-spacing:-.02em;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo i{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--exp) 0 50%,var(--use) 50%);display:inline-block}
+.navlinks{display:flex;gap:2px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.navlinks a{font-size:14px;color:var(--text-muted);text-decoration:none;padding:6px 9px;border-radius:8px;white-space:nowrap}
+.navlinks a:hover{background:var(--surface-2);color:var(--text)}
+.iconbtn{border:1px solid var(--border);background:var(--surface);border-radius:8px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;flex:none}
+.hero{padding:56px 0 8px}
+.kicker{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:8px}
+.q{font-size:20px;font-weight:700;line-height:1.5;border-left:4px solid var(--exp);padding:4px 0 4px 16px;margin:0 0 20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.intro{margin-bottom:16px}
+.intro h3{font-size:16px;margin:0 0 6px}
+.intro h3+ol{margin-top:0}
+.intro ol{margin:0 0 14px;padding-left:20px;font-size:15px}
+.intro ol li{margin-bottom:4px}
+.intro p{margin:0;font-size:15px}
+.stat{padding:18px 20px;border-top:4px solid var(--c,var(--accent))}
+.stat .v{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.stat .v small{font-size:15px;color:var(--text-muted);font-weight:600;margin-left:4px}
+.stat p{margin:4px 0 6px;font-size:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2>*,.stats>*{min-width:0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-weight:600;color:var(--text-muted);font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+details{margin-top:10px}
+details summary{cursor:pointer;font-size:13px;color:var(--text-muted)}
+.note{border-left:3px solid var(--use);padding:10px 14px;background:color-mix(in srgb,var(--use) 7%,var(--surface));border-radius:0 8px 8px 0;font-size:14px}
+.chartbox{position:relative;height:240px}
+.mix{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--surface-2);gap:2px}
+.mix i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--text-muted);margin:8px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw-e1{background:var(--exp)}.sw-e2{background:color-mix(in srgb,var(--exp) 55%,var(--surface))}.sw-e0{background:var(--null)}
+.sw-ni{background:repeating-linear-gradient(135deg,var(--null) 0 2px,transparent 2px 5px);outline:1px solid var(--null);outline-offset:-1px}
+.sw-cf{background:repeating-linear-gradient(45deg,var(--exp) 0 2px,transparent 2px 5px);outline:1px solid var(--exp);outline-offset:-1px}
+.sw-um{background:none;outline:1.5px dashed var(--text-muted);outline-offset:-2px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;border-radius:999px;padding:1px 9px;background:var(--surface-2);color:var(--text-muted);white-space:nowrap;line-height:1.6}
+.badge.e1{background:var(--exp);color:#fff}
+.badge.e2{background:color-mix(in srgb,var(--exp) 22%,var(--surface));color:var(--exp);font-weight:600}
+.badge.e0{background:var(--surface-2);color:var(--text)}
+.badge.um{background:none;border:1px dashed var(--text-muted)}
+.badge.ni{background:none;border:1px dashed var(--null)}
+.badge.obs{background:color-mix(in srgb,var(--use) 16%,transparent);color:var(--warn);font-weight:600}
+.badge.auto{background:color-mix(in srgb,var(--auto) 14%,transparent);color:var(--auto);font-weight:600}
+.badge.aug{background:color-mix(in srgb,var(--aug) 14%,transparent);color:var(--aug);font-weight:600}
+.badge.o{background:none;border:1px solid var(--border)}
+.badge.warn{background:none;border:1px solid var(--warn);color:var(--warn)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+.toolbar select{height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:0 10px}
+.plist td{cursor:pointer}
+.plist tr.open td{background:var(--surface-2)}
+.plist tr.pr:hover td{background:color-mix(in srgb,var(--surface-2) 60%,var(--surface))}
+.plist .t{font-weight:600}
+.detail td{cursor:default;background:var(--bg)!important;padding:0}
+.dbox{padding:18px 16px 22px}
+.dhead{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:12px}
+.metric{padding:12px 14px}
+.metric .v{font-size:22px;font-weight:800}
+.occ{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:4px 0;border-bottom:1px solid var(--border)}
+.occ:last-child{border-bottom:0}
+.gtitle{font-weight:700;margin:16px 0 6px;display:flex;align-items:center;gap:8px}
+.task{padding:14px 16px;margin-bottom:8px}
+.task .src-q{font-size:13px;color:var(--text-muted);border-left:3px solid var(--border);padding-left:8px;margin-bottom:6px}
+.task .kt{font-weight:600}
+.task .en{font-size:13px;color:var(--text-muted)}
+.arrow{font-size:12px;color:var(--text-muted);margin:6px 0 2px}
+.onet{background:var(--surface-2);border-radius:8px;padding:8px 10px;font-size:14px}
+.onet .ko{font-size:13px;color:var(--text-muted)}
+.simbar{position:relative;height:6px;background:var(--surface-2);border-radius:99px;margin:6px 0 2px;max-width:260px}
+.simbar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--text-muted)}
+.simbar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--warn)}
+.flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.autobar{display:inline-flex;width:70px;height:6px;border-radius:99px;overflow:hidden;vertical-align:middle;margin-left:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer;color:var(--text-muted)}
+.chip[aria-pressed="true"]{border-color:var(--accent);color:var(--text);font-weight:600}
+.ban{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--text);color:var(--bg);font-size:14px;padding:10px 16px;text-align:center}
+.ban a{color:var(--bg);font-weight:600}
+footer{margin:72px 0 0;padding:28px 0 32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)}
+footer p{margin:4px 0}
+@media (max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}.grid2,.dhead{grid-template-columns:1fr}h1{font-size:30px}}
+@media (max-width:560px){.wrap{padding:0 16px}.navlinks{display:none}.stat .v{font-size:22px}.plist .hide-s{display:none}.ban{font-size:12px}}
+</style>
+</head>
+<body>
+<nav class="top" aria-label="페이지 목차"><div class="wrap">
+  <a class="logo" href="#top"><i aria-hidden="true"></i>TaskLens 공고 과업 분석</a>
+  <div class="navlinks"><a href="https://pasmal0320-droid.github.io/">← TaskLens</a><a href="#summary">요약</a><a href="#posts">공고</a></div>
+  <button class="iconbtn" id="themeBtn" type="button" aria-label="밝게/어둡게 전환" title="밝게/어둡게 전환">◐</button>
+</div></nav>
+
+<main id="top" class="wrap">
+<header class="hero" id="overview">
+  <div class="kicker">KAIST ITM.690 인공지능 경영과 법 · <a href="https://pasmal0320-droid.github.io/">TaskLens</a> 확장</div>
+  <h1>TaskLens 공고 과업 분석</h1>
+  <p class="q">이 공고의 일 중 AI가 도울 수 있는 과업은 무엇인가?</p>
+  <div class="card pad intro">
+    <h3>분석한 공고는 이렇게 골랐습니다</h3>
+    <ol id="pickSteps"></ol>
+    <h3>공고를 이렇게 읽었습니다</h3>
+    <p id="readHow"></p>
+  </div>
+  <div class="stats" id="k1"></div>
+  <div class="note" style="margin-top:16px"><b>적용 가능성은 대체가 아니다.</b> 여기서 보는 'AI 적용 가능'(AI만으로 가능·도구가 있으면 가능)은 GPT-4가 평가한 '작업 시간 단축 가능성'이고, '대화에서 확인됨'은 특정 서비스(Claude)의 대화에 그 과업이 나타났다는 뜻이다. 어느 쪽도 일자리나 사람이 대체된다는 뜻이 아니다.</div>
+</header>
+
+<section id="summary">
+  <h2>요약</h2>
+  <div class="grid2">
+    <div class="card pad">
+      <h3>과업 판정 분포 <span class="muted small" id="labN"></span></h3>
+      <div class="mix" id="labMix" role="img" aria-label="과업 판정 분포"></div>
+      <div class="legend" id="labLegend"></div>
+      <div class="scroll" id="labTable" style="margin-top:10px"></div>
+    </div>
+    <div class="card pad">
+      <h3>AI 적용 가능 과업이 50% 이상인 공고</h3>
+      <div class="stat" style="padding:0;border:0"><div class="v num" id="k3v"></div><p class="small" id="k3p" style="margin:2px 0 8px"></p></div>
+      <div class="chartbox" style="height:200px"><canvas id="cHist" role="img" aria-label="공고별 AI 적용 가능 과업 비중 분포"></canvas></div>
+      <p class="src">공고별 AI 적용 가능 과업(AI만으로 가능 + 도구가 있으면 가능) 비중의 분포. AI 적용 가능성 평가가 연결된 과업이 3개 이상인 공고만 셌다. 50%는 임의의 기준선이다.</p>
+    </div>
+  </div>
+  <div class="card pad" style="margin-top:16px">
+    <h3>직무군별 AI 적용 가능 과업 비중</h3>
+    <div class="scroll" id="groupTable"></div>
+  </div>
+</section>
+
+<section id="posts">
+  <h2>공고 목록과 상세</h2>
+  <div class="toolbar">
+    <select id="fGroup" aria-label="직무군"></select>
+    <select id="fEmp" aria-label="고용형태"></select>
+    <select id="fAi" aria-label="AI 신호"></select>
+    <select id="fSort" aria-label="정렬"><option value="k2">정렬: AI 적용 가능 비중</option><option value="n">정렬: 추출 과업 수</option><option value="g">정렬: 직무군</option></select>
+    <span class="small muted" id="pCount"></span>
+  </div>
+  <div class="card scroll"><table class="plist" id="plist"></table></div>
+</section>
+
+<section id="links" style="padding-top:32px">
+  <div class="grid2">
+    <div class="card pad"><h3>자주 연결된 O*NET 과업</h3><div class="scroll" id="topTasks"></div></div>
+    <div class="card pad"><h3>자주 연결된 O*NET 직업 <span class="muted small">(TaskLens 직업 화면으로 이동)</span></h3><div class="scroll" id="topOccs"></div></div>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b>TaskLens 공고 과업 분석</b> · 강병석 · KAIST 기술경영전문대학원 ITM.690 인공지능 경영과 법 (2026 가을)</p>
+  <p id="footSrc"></p>
+  <p>관련 페이지: <a href="https://pasmal0320-droid.github.io/">TaskLens — AI 과업 노출 탐색기</a></p>
+  <p id="builtAt"></p>
+</div></footer>
+<div class="ban" role="note">이 결과는 채용 심사·인사 평가 용도로 사용할 수 없습니다.</div>
+
+<script>
+const D = __DATA__;
+const $ = s => document.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v; else if (k === 'style') e.style.cssText = v;
+    else if (k === 'text') e.textContent = v; else e.setAttribute(k, v);
+  }
+  for (const k of kids) if (k != null && k !== false) e.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return e;
+};
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = n => n.toLocaleString('ko-KR');
+const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '산출 불가';
+const frac = (a, b) => b ? `${a}/${b} (${pct(a, b)})` : '산출 불가';
+const TL = 'https://pasmal0320-droid.github.io/#occ=';
+const room = b => b == null ? '산출 불가' : b.toFixed(2);
+const S = D.summary, K1 = S.k1, P = D.posts, T = D.tasks, dec = S.decision;
+function table(head, rows, numCols = []) {
+  const t = el('table'); const tr = el('tr'); head.forEach((h, i) => tr.append(el('th', { class: numCols.includes(i) ? 'n' : '', text: h }))); t.append(tr);
+  rows.forEach(r => { const tr = el('tr'); r.forEach((c, i) => tr.append(el('td', { class: numCols.includes(i) ? 'n' : '' }, c))); t.append(tr); }); return t;
+}
+const LAB = { E1: ['AI만으로 가능', 'e1', 'GPT-4 평가. AI만으로 같은 품질에 작업 시간을 절반 이상 줄일 수 있다고 본 과업입니다(1점).'],
+  E2: ['도구가 있으면 가능', 'e2', 'GPT-4 평가. AI에 추가 도구·시스템을 붙여야 작업 시간을 절반 이상 줄일 수 있다고 본 과업입니다(0.5점).'],
+  E0: ['해당 없음', 'e0', 'GPT-4 평가. AI로 작업 시간을 크게 줄이기 어렵다고 본 과업입니다(0점).'],
+  '문장 내 등급 불일치': ['문장 내 등급 불일치', 'ni', '같은 O*NET 문장이 여러 직업에 붙어 있고 직업마다 적용 가능성 평가가 달라 하나로 정하지 않음'],
+  '지표 없음': ['지표 없음', 'ni', 'O*NET 과업은 찾았으나 적용 가능성 평가가 연결되지 않음'],
+  '매칭 불가': ['매칭 불가', 'um', '이 방법과 기준으로는 신뢰할 만한 연결을 확인하지 못함'] };
+const LORDER = ['E1', 'E2', 'E0', '문장 내 등급 불일치', '지표 없음', '매칭 불가'];
+const SW = { E1: 'sw-e1', E2: 'sw-e2', E0: 'sw-e0', '문장 내 등급 불일치': 'sw-cf', '지표 없음': 'sw-ni', '매칭 불가': 'sw-um' };
+const labBadge = l => el('span', { class: 'badge ' + LAB[l][1], title: LAB[l][2], text: LAB[l][0] });
+function obsBadges(x) {
+  const out = [];
+  if (x.status !== '매칭') return out;
+  if (x.obs === '관측') {
+    if (x.auto == null) out.push(el('span', { class: 'badge obs', title: 'Claude 대화에서 이 과업으로 분류된 사례가 공개 자료에 있습니다. 대화 방식은 분류되지 않았습니다.' }, '대화에서 확인됨 · 대화 방식 분류 안 됨'));
+    else {
+      const a = Math.round(x.auto * 100), bar = el('span', { class: 'autobar' }, el('i', { style: `width:${a}%;background:var(--auto)` }), el('i', { style: `width:${100 - a}%;background:var(--aug)` }));
+      out.push(el('span', { class: 'badge obs', title: 'Claude 대화에서 이 과업으로 분류된 사례가 공개 자료에 있습니다. 이 일을 하는 사람이 직접 Claude를 썼다는 뜻은 아닙니다.' }, '대화에서 확인됨'));
+      out.push(el('span', { class: 'badge ' + (x.auto >= .5 ? 'auto' : 'aug'), title: '해당 과업 대화 중 AI에 맡기는 방식(지시·피드백 반복)과 사람이 함께 작업하는 방식(배우기·다듬기·검토하기)의 비율. 분모: 방식을 분류할 수 있는 대화' }, `${a}% AI에 맡김 · ${100 - a}% 사람과 함께`, bar));
+      if (x.auto >= .5) out.push(el('span', { class: 'small muted', text: 'AI에 일을 맡기는 대화가 많았다는 뜻이며, 사람이 대체됐다는 관측이 아닙니다' }));
+    }
+  } else if (x.obs === '관측되지 않음') out.push(el('span', { class: 'badge o', title: '공개 기준을 충족하는 관측 값이 없습니다. 실제 사용이 0건이라는 뜻은 아닙니다.' }, '공개 자료에서 확인 안 됨'));
+  else out.push(el('span', { class: 'badge warn', title: '과업표의 버전이나 문구 차이 등으로 Claude 자료의 해당 항목을 연결하지 못했습니다. 관측되지 않았다는 뜻은 아닙니다.' }, '자료 연결 안 됨'));
+  return out;
+}
+
+/* ---------- P2-1 */
+const nGroups = Object.keys(S.selection.by_group).length, nQuery = 10;
+[['모은 공고', `2026년 9월 고용24에 등록된 사무·전문직 ${nQuery}개 직종 공고 ${K1.population}건`],
+ ['걸러 낸 공고', `업무 내용 없이 직무명이나 근무조건만 적힌 ${K1.population - K1.ab}건을 빼고 ${K1.ab}건`],
+ ['분석한 공고', `${nGroups}개 직무 분야(회계·경리, 디자인, 고객상담, 돌봄·복지 등)마다 ${S.selection.per_group}건씩 무작위로 뽑은 ${K1.analyzed}건. 분야마다 ${S.selection.per_group}건이라 분야 간 비교는 참고용입니다.`]]
+  .forEach(([b, t]) => $('#pickSteps').append(el('li', {}, el('b', { text: b + ': ' }), t)));
+$('#readHow').textContent = "공고의 업무 설명을 '부가가치세 신고하기'처럼 하나의 일 단위로 나누고, 일마다 가장 비슷한 미국 표준 과업(O*NET)을 찾았습니다. 표준 과업에는 AI 적용 가능성 평가와 Claude 대화에서 확인됐는지가 이미 붙어 있어, 이를 공고의 일에 가져왔습니다. 아래 숫자는 이 과정을 거친 결과입니다.";
+const card = (c, big, unit, sub, title, desc) => el('div', { class: 'card stat', style: `--c:var(${c})` },
+  el('div', { class: 'v num' }, big, el('small', { text: unit }), sub ? el('small', { text: sub }) : null), el('p', { text: title }), el('div', { class: 'src', text: desc }));
+$('#k1').append(
+  card('--accent', String(K1.analyzed), '건', '', '분석한 공고', `${K1.population}건 → 업무가 적힌 ${K1.ab}건 → 분야별 ${S.selection.per_group}건씩`),
+  card('--text-muted', String(K1.tasks), '개', '', '공고에서 나눈 일(과업)', `공고당 평균 ${Math.round(K1.tasks / K1.analyzed)}개`),
+  card('--exp', String(K1.matched), '개', `(${pct(K1.matched, K1.tasks)})`, '표준 과업과 연결된 일', `${K1.tasks - K1.matched}개는 충분히 비슷한 표준 과업을 찾지 못함`),
+  card('--exp', String(K1.graded), '개', `(${pct(K1.graded, K1.matched)})`, 'AI 적용 가능성 평가를 가져온 일', `연결된 ${K1.matched}개 중. ${K1.matched - K1.graded}개는 평가 자료 없음`));
+
+/* ---------- 공통 */
+const V = S.tasklens_version;
+
+/* ---------- P2-3 */
+const LC = S.labels, tot = T.length;
+$('#labN').textContent = `(과업 ${tot}개)`;
+LORDER.forEach(l => { const n = LC[l] || 0; if (n) $('#labMix').append(el('i', { class: SW[l], style: `width:${n / tot * 100}%`, title: `${LAB[l][0]} ${n}개` })); });
+LORDER.forEach(l => $('#labLegend').append(el('span', {}, el('i', { class: SW[l] }), `${LAB[l][0]} ${LC[l] || 0}`)));
+$('#labTable').append(table(['판정', '과업', '뜻'], LORDER.map(l => [labBadge(l), String(LC[l] || 0), LAB[l][2]]), [1]));
+$('#k3v').textContent = frac(S.k3.num, S.k3.den);
+$('#k3p').textContent = `평가가 연결된 과업이 2개 이하라 제외 ${S.k3.excluded_few}건, 산출 불가 ${S.k3.not_computable}건`;
+let hist = null;
+function drawHist() {
+  if (hist) hist.destroy();
+  const base = P.filter(p => p.graded >= 3), bins = [0, 0, 0, 0, 0];
+  base.forEach(p => bins[Math.min(4, Math.floor(p.k2 * 5))]++);
+  hist = new Chart($('#cHist'), { type: 'bar', data: { labels: ['0~20%', '20~40%', '40~60%', '60~80%', '80~100%'], datasets: [{ data: bins, backgroundColor: css('--exp'), borderRadius: 4, barPercentage: .7 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `공고 ${c.raw}건` } } },
+      scales: { y: { ticks: { precision: 0, color: css('--text-muted') }, grid: { color: css('--border') }, border: { display: false }, title: { display: true, text: '공고 수', color: css('--text-muted') } }, x: { ticks: { color: css('--text-muted') }, grid: { display: false } } } } });
+}
+const groups = [...new Set(P.map(p => p.group))];
+$('#groupTable').append(table(['직무군', '분석 공고', 'AI 적용 가능 / 평가 과업', 'AI만으로 가능', '매칭 불가', '지표 없음·불일치', '대화에서 확인됨 / 연결된 과업'], groups.map(g => {
+  const ps = P.filter(p => p.group === g), s = k => ps.reduce((a, p) => a + p[k], 0);
+  return [g, String(ps.length), frac(s('E1') + s('E2'), s('graded')), frac(s('E1'), s('graded')), String(s('n_unmatched')), String(s('n_noindex') + s('n_conflict')), frac(s('k5_obs'), s('k5_checkable'))];
+}).sort((a, b) => a[0].localeCompare(b[0])), [1, 2, 3, 4, 5, 6]));
+const matchedT = T.filter(x => x.status === '매칭');
+const byText = {};
+matchedT.forEach(x => { const c = x.cands[0]; (byText[c.text] ||= { c, n: 0, lab: x.label }).n++; });
+$('#topTasks').append(table(['O*NET 과업', '연결 수', '판정'], Object.values(byText).sort((a, b) => b.n - a.n).slice(0, 10).map(o =>
+  [el('div', {}, o.c.text, el('div', { class: 'src', text: `${o.c.ko} (${o.c.ko_source})` })), String(o.n), LAB[o.lab] ? labBadge(o.lab) : o.lab]), [1]));
+const occW = {};
+matchedT.forEach(x => { const c = x.cands[0]; c.occs.forEach(o => { (occW[o.code] ||= { o, w: 0 }).w += 1 / Math.max(1, c.n_occs); }); });
+$('#topOccs').append(table(['직업 (TaskLens)', '연결 과업(가중)', 'AI 적용 가능성'], Object.values(occW).sort((a, b) => b.w - a.w).slice(0, 10).map(({ o, w }) =>
+  [el('a', { href: TL + o.code, target: '_blank', rel: 'noopener' }, `${o.ko || o.en}`, el('span', { class: 'src', text: ` ${o.code}` })), w.toFixed(1), o.beta == null ? '-' : room(o.beta)]), [1, 2]));
+
+/* ---------- P2-4 / P2-5 */
+const empS = v => v.startsWith('기간의 정함이 없는') ? (v.includes('시간(선택)제') ? '시간(선택)제' : '기간 정함 없음') : '기간제';
+function fill(sel, label, vals) { sel.replaceChildren(el('option', { value: '', text: label + ': 전체' }), ...vals.map(v => el('option', { value: v, text: v }))); }
+fill($('#fGroup'), '직무군', groups.sort()); fill($('#fEmp'), '고용형태', [...new Set(P.map(p => empS(p.emp)))]); fill($('#fAi'), 'AI 신호', ['도구활용', 'AI개발', '없음']);
+let openId = null;
+function k2txt(p) { return p.graded ? `${p.E1 + p.E2}/${p.graded} (${pct(p.E1 + p.E2, p.graded)})` : '산출 불가'; }
+function renderList() {
+  const g = $('#fGroup').value, e = $('#fEmp').value, a = $('#fAi').value, s = $('#fSort').value;
+  let ps = P.filter(p => (!g || p.group === g) && (!e || empS(p.emp) === e) && (!a || p.ai === a));
+  ps.sort((x, y) => s === 'n' ? y.n_tasks - x.n_tasks : s === 'g' ? x.group.localeCompare(y.group) : (y.k2 ?? -1) - (x.k2 ?? -1));
+  $('#pCount').textContent = `${ps.length}건`;
+  const t = $('#plist'); t.replaceChildren(el('tr', {}, el('th', { text: '공고' }), el('th', { class: 'hide-s', text: '직무군' }), el('th', { class: 'n', text: '과업' }), el('th', { class: 'n', text: 'AI 적용 가능 / 평가 과업' }), el('th', { class: 'hide-s', text: '표시' })));
+  ps.forEach(p => {
+    const tr = el('tr', { class: 'pr' + (p.ID === openId ? ' open' : ''), tabindex: '0', 'aria-expanded': String(p.ID === openId) },
+      el('td', {}, el('div', { class: 't', text: p.title }), el('div', { class: 'src', text: `${p.company} · ${p.ID}` })),
+      el('td', { class: 'hide-s small', text: p.group }), el('td', { class: 'n', text: p.n_tasks }), el('td', { class: 'n', text: k2txt(p) }),
+      el('td', { class: 'hide-s' }, el('div', { class: 'flags', style: 'margin:0' }, p.ai === '도구활용' ? el('span', { class: 'badge obs', title: '공고 문구에 AI 도구 활용을 요구·우대하는 내용이 있음', text: 'AI 도구 활용 요구' }) : null,
+        p.ai === 'AI개발' ? el('span', { class: 'badge o', text: 'AI 개발 직무' }) : null, p.caution ? el('span', { class: 'badge warn', title: '추출 과업이 2개 이하이거나 적용 가능성 평가가 연결된 과업 비율이 절반 미만', text: '해석 주의' }) : null)));
+    const toggle = () => { openId = openId === p.ID ? null : p.ID; renderList(); if (openId) document.getElementById('d-' + p.ID)?.scrollIntoView({ block: 'nearest' }); };
+    tr.onclick = toggle; tr.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggle(); } };
+    t.append(tr);
+    if (p.ID === openId) t.append(el('tr', { class: 'detail' }, el('td', { colspan: '5', id: 'd-' + p.ID }, detail(p))));
+  });
+}
+const FLAGS = [['AI에 맡김이 더 많음', x => x.obs === '관측' && x.auto != null && x.auto >= .5], ['사람과 함께가 더 많음', x => x.obs === '관측' && x.auto != null && x.auto < .5],
+  ['대화 방식 분류 안 됨', x => x.obs === '관측' && x.auto == null], ['자료 연결 안 됨', x => x.status === '매칭' && x.obs === '확인 불가']];
+const claudeHead = p => p.k5_checkable ? ` — Claude 자료와 연결된 과업 ${p.k5_checkable}개 중 ${p.k5_obs}개` : ' — Claude 자료와 연결된 과업이 없습니다';
+function claudeDetail(p) {
+  const n = p.k5_auto_major + p.k5_aug_major, parts = [];
+  if (p.k5_aug_major) parts.push(`${p.k5_aug_major}개는 '사람과 함께 작업함'이`);
+  if (p.k5_auto_major) parts.push(`${p.k5_auto_major}개는 'AI에 맡김'이`);
+  let t = n ? `대화 방식이 분류된 과업 ${n}개 중 ${parts.join(', ')} 더 많습니다.` : '';
+  if (p.k5_unknown) t += `${t ? ' ' : ''}${p.k5_unknown}개는 대화 방식이 분류되지 않았습니다.`;
+  return t;
+}
+function detail(p) {
+  const xs = T.filter(x => x.ID === p.ID), box = el('div', { class: 'dbox' });
+  const occs = el('div', {}, ...(p.top_occ.length ? p.top_occ.map(o => el('div', { class: 'occ' }, el('a', { href: TL + o.code, target: '_blank', rel: 'noopener' }, `${o.ko || o.en} `, el('span', { class: 'src', text: o.code })), el('span', { class: 'num small', text: `AI 적용 가능성 ${room(o.beta)}` }))) : [el('div', { class: 'small muted', text: '매칭된 과업 없음' })]));
+  box.append(el('div', { class: 'dhead' },
+    el('div', { class: 'card metric' }, el('div', { class: 'small muted', text: '매칭 과업이 가장 많이 연결된 O*NET 직업 (TaskLens에서 보기)' }), occs),
+    el('div', { class: 'card metric' },
+      el('div', { class: 'small muted', text: 'AI 적용 가능 과업 비중' }), el('div', { class: 'v num', text: k2txt(p) }),
+      el('div', { class: 'small', text: `AI만으로 가능 ${p.graded ? `${p.E1}/${p.graded}` : '-'} · 매칭 불가 ${p.n_unmatched} · 지표 없음·불일치 ${p.n_noindex + p.n_conflict}` }),
+      el('div', { class: 'small', style: 'margin-top:10px' }, el('b', { text: 'AI 적용 가능성' }), ` — 이 공고 `, el('b', { text: room(p.beta) }),
+        p.top_occ[0] && p.top_occ[0].beta != null ? ` · 비슷한 표준 직업(${p.top_occ[0].ko || p.top_occ[0].en}) ` : '', p.top_occ[0] && p.top_occ[0].beta != null ? el('b', { text: room(p.top_occ[0].beta) }) : ''),
+      el('div', { class: 'src', text: 'GPT-4가 평가한 과업의 AI 노출 점수입니다. 0~1 사이 값이며, 도구가 필요한 과업은 절반만 반영합니다(AI만으로 가능 1점, 도구가 있으면 가능 0.5점, 해당 없음 0점의 평균). 표준 직업 값은 TaskLens 직업 화면의 AI 적용 가능성과 같습니다. 높다고 일자리가 사라진다는 뜻은 아닙니다.' }),
+      el('div', { class: 'small', style: 'margin-top:10px' }, el('b', { text: '대화에서 확인된 과업' }), claudeHead(p)),
+      claudeDetail(p) ? el('div', { class: 'src', text: claudeDetail(p) }) : null)));
+  const active = new Set(), chips = el('div', { class: 'chips', style: 'margin:4px 0 6px' }), list = el('div');
+  FLAGS.forEach(([name, f]) => { const n = xs.filter(f).length; if (!n) return; const c = el('button', { type: 'button', class: 'chip', 'aria-pressed': 'false' }, `${name} ${n}`);
+    c.onclick = () => { active.has(name) ? active.delete(name) : active.add(name); c.setAttribute('aria-pressed', String(active.has(name))); draw(); }; chips.append(c); });
+  if (chips.childNodes.length) box.append(el('div', { class: 'small muted', text: '겹칠 수 있는 표시로 걸러 보기' }), chips);
+  function draw() {
+    list.replaceChildren();
+    const shown = xs.filter(x => [...active].every(a => FLAGS.find(f => f[0] === a)[1](x)));
+    LORDER.forEach(l => { const g = shown.filter(x => x.label === l); if (!g.length) return;
+      list.append(el('div', { class: 'gtitle' }, labBadge(l), el('span', { class: 'small muted', text: `${g.length}개 · ${LAB[l][2]}` })));
+      g.forEach(x => list.append(taskCard(x, p))); });
+    if (!shown.length) list.append(el('p', { class: 'small muted', text: xs.length ? '조건에 맞는 과업이 없다.' : '추출된 과업이 없다.' }));
+  }
+  draw(); box.append(list); return box;
+}
+function taskCard(x, p) {
+  const c = x.cands[0], card = el('div', { class: 'card task' });
+  card.append(el('div', { class: 'src-q' }, `공고 원문 “${x.source}”`, el('span', { class: 'src', text: ` · 구인인증번호 ${p.ID}${x.added ? ' · 검토에서 추가' : ''}` })),
+    el('div', { class: 'kt', text: x.task_ko }), el('div', { class: 'en', text: x.task_en }),
+    el('div', { class: 'arrow', text: x.status === '매칭' ? '↓ 가장 가까운 O*NET 과업' : `↓ 가장 가까운 O*NET 과업 (연결하지 않음: ${x.why})` }));
+  const occLinks = c.occs.slice(0, 3).map(o => el('a', { href: TL + o.code, target: '_blank', rel: 'noopener', class: 'small', style: 'margin-right:8px' }, `${o.ko || o.en} →`));
+  const w = Math.max(0, Math.min(1, (c.sim - .3) / .6));
+  card.append(el('div', { class: 'onet' }, el('div', { text: c.text }), el('div', { class: 'ko', text: `${c.ko} (${c.ko_source})` }),
+    el('div', { class: 'simbar', title: `유사도 ${c.sim.toFixed(3)}, 기준 ${D.summary.threshold.toFixed(2)}` }, el('i', { style: `width:${w * 100}%` }), el('b', { style: `left:${(D.summary.threshold - .3) / .6 * 100}%` })),
+    el('div', { class: 'src', text: `유사도 ${c.sim.toFixed(3)} (주황 선 = 기준 ${D.summary.threshold.toFixed(2)}) · 연결 직업 ${c.n_occs}개` }),
+    el('div', { style: 'margin-top:4px' }, el('span', { class: 'small muted', text: 'TaskLens에서 보기: ' }), ...occLinks)));
+  const flags = el('div', { class: 'flags' }, labBadge(x.label), ...obsBadges(x),
+    x.validated ? el('span', { class: 'badge o', title: '매칭 검증 표본에 포함되어 사람이 판정함', text: `검증 표본 · ${x.validated}` }) : null);
+  card.append(flags);
+  return card;
+}
+['#fGroup', '#fEmp', '#fAi', '#fSort'].forEach(s => $(s).onchange = renderList);
+renderList();
+
+$('#footSrc').textContent = `데이터: 고용24 채용정보(2026년 9월 사무·전문직 공고 ${K1.population}건), TaskLens ${V.built_at} 빌드(O*NET 31.0, GPTs are GPTs, Anthropic Economic Index). 판정 검토: ${dec.reviewer}.`;
+$('#builtAt').textContent = `페이지 생성: ${D.built}`;
+
+/* 테마 */
+drawHist();
+$('#themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem('jobmap-theme', document.documentElement.dataset.theme); } catch (e) {}
+  drawHist();
+};
+try { const t = localStorage.getItem('jobmap-theme'); if (t) { document.documentElement.dataset.theme = t; drawHist(); } } catch (e) {}
+</script>
+</body>
+</html>
